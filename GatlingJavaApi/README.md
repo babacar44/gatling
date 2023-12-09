@@ -86,3 +86,16 @@ $[?(@.id==1)]
 "rating": "Mature"
 }
 ]
+
+
+https://jmespath.org/
+
+[0].releaseDate
+
+[? id == `1`].name
+
+[? category == 'Shooter']
+
+[? category == 'Shooter'].name
+
+[? category != 'Shooter'].name
