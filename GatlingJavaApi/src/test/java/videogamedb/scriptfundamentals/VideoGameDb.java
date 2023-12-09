@@ -5,9 +5,6 @@ import io.gatling.javaapi.core.ScenarioBuilder;
 import io.gatling.javaapi.core.Simulation;
 import io.gatling.javaapi.http.HttpProtocolBuilder;
 
-import java.time.Duration;
-import java.util.List;
-
 import static io.gatling.javaapi.core.CoreDsl.*;
 import static io.gatling.javaapi.http.HttpDsl.http;
 import static io.gatling.javaapi.http.HttpDsl.status;
@@ -16,8 +13,6 @@ public class VideoGameDb extends Simulation {
 
     public static final String GET_ALL_VIDEOS_GAMES = "Get all videos games ";
     public static final String GET_SPECIFIC_GAME = "Get specific game";
-    public static final String GAME_ID = "gameId";
-    public static final String RESPONSE_BODY = "responseBody";
     public static final String VIDEO_GAME_ENDPT = "/videogame";
     // 1 Http Configuration
     private final HttpProtocolBuilder httpProtocol = http
