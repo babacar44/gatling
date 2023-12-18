@@ -1,0 +1,200 @@
+analyse
+
+filter {
+    
+    grok {
+        match => {"message" => "time=%{DATA:time}\|level=%{DATA:level}\|env=%{DATA:env}\|event_cod=%{DATA:event_cod}\|event_typ=%{DATA:event_typ}\|app_id=%{DATA:app_id}\|app_version=%{DATA:app_version}\|component_id=%{DATA:component_id}\|thread_id=%{DATA:thread_id}\|req_id=%{DATA:req_id}\|uom_cod=%{DATA:uom_cod}\|corr_id=%{DATA:corr_id}\|usr_id=%{DATA:usr_id}\|message=(\[%{DATA:methode}\])?(%{DATA:log_message})?\|exception=%{GREEDYDATA:exception}"}
+    }
+
+    if [methode] =~ "CREATE"
+	{
+		grok {
+			match => { "log_message" => "(IDSAS:%{DATA:IDSAS}\|)?(REFERENCESDR0:%{DATA:REFERENCESDR0}\|)?(IDCR:%{DATA:IDCR}\|)?(CODECANAL:%{DATA:CODECANAL}\|)?(CODEPROCESS:%{DATA:CODEPROCESS}\|)?(ESPACESTOCKAGE:%{DATA:ESPACESTOCKAGE}\|)?(TYPEDOCUMENT:%{DATA:TYPEDOCUMENT}\|)?(AGENT:%{DATA:AGENT}\|)?(PERF:%{GREEDYDATA:PERF})?" }
+		}
+	} else if [methode] =~ "GET_URL"
+	{
+		grok {
+			match => { "log_message" => "(IDSAS:%{DATA:IDSAS}\|)?(REFERENCESDR0:%{DATA:REFERENCESDR0}\|)?(IDCR:%{DATA:IDCR}\|)?(CODECANAL:%{DATA:CODECANAL}\|)?(CODEPROCESS:%{DATA:CODEPROCESS}\|)?(EDS:%{DATA:EDS}\|)?(AGENT:%{DATA:AGENT}\|)?(PERF:%{GREEDYDATA:PERF})?" }
+		}
+	} else if [methode] =~ "DELETE"
+	{
+		grok {
+			match => { "log_message" => "(IDSAS:%{DATA:IDSAS}\|)?(IDCR:%{DATA:IDCR}\|)?(CODECANAL:%{DATA:CODECANAL}\|)?(CODEPROCESS:%{DATA:CODEPROCESS}\|)?(EDS:%{DATA:EDS}\|)?(AGENT:%{DATA:AGENT}\|)?(PERF:%{GREEDYDATA:PERF})?" }
+		}
+	}
+
+    if [PERF] {
+        mutate {
+          add_field => { "PERF_int" => "%{PERF}" }
+        }
+        mutate {
+          convert => {
+            "PERF_int" => "integer"
+          }
+        }
+    }
+
+}
+
+
+# Creates a component template for mappings
+PUT /_component_template/te_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}-mappings
+{
+    "template":{
+        "settings":{
+            "number_of_shards":1,
+            "number_of_replicas":1
+        },
+        "mappings":{
+            "dynamic": false,
+            "properties":{
+                "@timestamp":{
+                    "type":"date"
+                },
+                "corr_id" : {
+                    "type" : "keyword",
+                    "doc_values" : true
+                },
+                "event_typ" : {
+                    "type" : "keyword",
+                    "doc_values" : true
+                },
+                "component_id" : {
+                    "type" : "keyword",
+                    "doc_values" : true
+                },
+                "uom_cod" : {
+                    "type" : "keyword",
+                    "doc_values" : true
+                },
+                "level" : {
+                    "type" : "keyword",
+                    "doc_values" : true
+                },
+                "adabo_cod" : {
+                    "type" : "keyword",
+                    "doc_values" : true
+                },
+                "component_version" : {
+                    "type" : "keyword"
+                },
+                "sec_event_typ" : {
+                    "type" : "keyword"
+                },
+                "usr_id" : {
+                    "type" : "keyword"
+                },
+                "event_cod" : {
+                    "type" : "keyword"
+                },
+                "log_message" : {
+                    "type" : "keyword"
+                },
+                "app_id" : {
+                    "type" : "keyword"
+                },
+                "AGENT" : {
+                    "type" : "keyword"
+                },
+                "CODECANAL" : {
+                    "type" : "keyword"
+                },
+                "CODEPROCESS" : {
+                    "type" : "keyword"
+                },
+                "env" : {
+                    "type" : "keyword"
+                },
+                "message": {
+                    "type": "keyword"
+                },
+                "method": {
+                    "type": "keyword"
+                },
+                "path": {
+                    "type": "keyword"
+                },
+                "ESPACESTOCKAGE" : {
+                    "type" : "keyword"
+                },
+                "IDCR" : {
+                    "type" : "keyword"
+                },
+                "IDSAS" : {
+                    "type" : "keyword"
+                },
+                "methode" : {
+                    "type" : "keyword"
+                },
+                "PERF" : {
+                    "type" : "keyword"
+                },
+                "PERF_int" : {
+                    "type" : "integer"
+                },
+                "REFERENCESDR0" : {
+                    "type" : "keyword"
+                },
+                "req_id" : {
+                    "type" : "keyword"
+                },
+                "TYPEDOCUMENT" : {
+                    "type" : "keyword"
+                }
+            }
+        }
+    },
+    "_meta":{
+        "description":"Template ds_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}"
+    }
+}
+
+# Creates a component template for index settings
+PUT /_component_template/te_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}-settings
+{
+    "template": {
+        "settings": {
+            "index.lifecycle.name": "lp_{{ env }}_classic"
+        }
+    },
+    "_meta": {
+        "description": "Settings for ILM"
+    }
+}
+
+# Component template with index aliases
+PUT /_component_template/te_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}-aliases
+{
+    "template":{
+        "aliases":{
+            "al_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}":{
+                
+            },
+            "al_{{adabo}}_{{ produit }}_{{ solution }}_{{ libelle }}":{
+                "filter":{
+                    "term":{
+                        "adabo_cod":{
+                            "value":"{{adabo}}",
+                            "case_insensitive":true
+                        }
+                    }
+                }
+            },
+            "al_{{ada}}_{{ produit }}_{{ solution }}_{{ libelle }}":{
+                
+            }
+        }
+    }
+}
+
+PUT /_index_template/te_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}
+{
+    "index_patterns": ["ds_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}"],
+    "data_stream": { },
+    "composed_of": [ "te_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}-mappings", "te_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}-settings",
+     "te_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}-aliases" ],
+    "priority": 500,
+    "_meta": {
+        "description": "Index Template ds_{{ env }}_{{ produit }}_{{ solution }}_{{ libelle }}"
+    }
+}
